@@ -9,126 +9,118 @@ import json
 
 app = Flask(__name__)
 
+def generate_base_heading(dy, dx):
+    base_heading = math.atan2(dy, dx) * 180 / 3.1415
+    if base_heading < 0:
+        base_heading = 360 + base_heading
+    return base_heading
+
+def store_image(idx, surl):
+    img = requests.get(surl).content
+    with open("images/image" + str(idx) + ".jpg", 'wb') as handler:
+        handler.write(img)
+    return
+
+def write_images(point_list):
+    '''
+        point_list is a regular array of arrays
+    '''
+    idx = 0
+    for outer in point_list:
+        for inner in outer:
+            store_image(idx, inner)
+            idx += 1
+    return
+
 @app.route("/health")
 def health_endpoint():
     return "API is healthy."
 
-@app.route('/get_images', methods=['GET', 'POST'])
-def get_images():
-    start_x = float(request.args.get('start_x')) # float coordinate x
-    end_x = float(request.args.get('end_x')) # float coordinate x
-    start_y = float(request.args.get('start_y')) # float coordinate y
-    end_y = float(request.args.get('end_y')) # float coordinate y
-    distance = math.sqrt(((end_x - start_x)*(end_x - start_x)) + ((end_y - start_y)*(end_y - start_y)))
-    steps = int(distance * 10000)
+@app.route("/query_and_download")
+def test_cloud_vision():
+    '''
+        test_cloud_vision is an endpoint that will take in 2 (x,y) points in the params
+        EXAMPLE POINT:
+            RANDOM STRETCH ON ST MARYS STREET
+            # provided road start and stop
+                initial_x = 42.348444
+                initial_y = -71.1069238
+                final_x = 42.347162
+                final_y = -71.1071453
+        it will then query the Google Street View API to get images between these points of the street
+        The images will collect 8 images for each point, one every 45 degrees
+    '''
+    # retrieve variables from request URL
+    xi = float(request.args.get('xi'))
+    xf = float(request.args.get('xf'))
+    yi = float(request.args.get('yi'))
+    yf = float(request.args.get('yf'))
+    call_static_image_api = int(request.args.get('call_maps'))
+    # retrieve the API_KEY from the configuration module
     API_KEY = config.map_api_key
-    base_url = "https://maps.googleapis.com/maps/api/streetview"
-    x_step = (end_x - start_x) / steps
-    y_step = (end_y - start_y) / steps
-    base_heading = math.atan2( y_step, x_step ) * 180 / 3.1415
-    if base_heading < 0:
-        base_heading = 360 + base_heading
-    count = 0
-    value = {
-            "query_list": [],
-            "steps": steps
-        }
-    while count < steps:
-        # increment locations
-        print("iter")
-        temp_x = start_x + count * x_step
-        temp_y = start_y + count * y_step
-        count = count + 1
-        # build the query
-        size = "?size=640x640" # max size
-        location = "&location=" + str(temp_x) + "," + str(temp_y) # convert locaation to string
-        pitch = "&pitch=0" # default to 0 pitch
-        fov = "&fov=80" #default fov
-        api = "&key=" + API_KEY # for api access
-        temp_heading = base_heading
-        query = base_url + size + location + str(pitch) + fov + "&heading=" + str(temp_heading) + api
-        squery_list_temp = [sign_url(query)]
-        for i in range(3):
-            temp_heading = temp_heading + 30
-            if temp_heading > 360:
-                temp_heading = temp_heading - 360
-            query = base_url + size + location + str(pitch) + fov + "&heading=" + str(temp_heading) + api
-            squery_list_temp.append(sign_url(query))
-        print(squery_list_temp)
-        value["query_list"].append(squery_list_temp)
-    return json.dumps(value)
-    
-
-
-@app.route("/example_query_construct")
-def example_image_endpoint():
-    final_x = 0
-    final_y = 0
-    initial_x = 0
-    initial_y = 0
-    d_xt = final_x - initial_x
-    d_yt = final_y - initial_y
-    # generates 
-    dx = d_xt / 10
-    dy = d_yt / 10
-    count = 0
-    base_heading = math.atan2( d_yt, d_xt ) * 180 / 3.1415
-    if base_heading < 0:
-        base_heading = 360 + base_heading
-    value = {
-        "count": count,
-        "dy_t": d_yt,
-        "dx_y": d_xt,
-        "dy": dy,
-        "dx": dx,
-        "query_list": [],
-        "squery_list": []
-    }
-    while count < 10:
-        temp_x = initial_x + count * dx
-        temp_y = initial_y + count * dy
-        count = count + 1
-        # build the query
-        size = "?size=640x640"
-        location = "&location=" + str(temp_x) + "," + str(temp_y)
-        pitch = "&pitch=0"
-        api = "&key=" + api_key
-        temp_heading = base_heading
-        query = base_url + path + size + location + str(pitch) + "&heading=" + str(temp_heading) + api
-        query_list_temp = [query]
-        squery_list_temp = [sign_url(query)]
-        for i in range(5):
-            temp_heading = temp_heading + 60
-            if temp_heading > 360:
-                temp_heading = temp_heading - 360
-            query = base_url + path + size + location + str(pitch) + "&heading=" + str(temp_heading) + api
-            query_list_temp.append(query)
-            squery_list_temp.append(sign_url(query))
-        value["query_list"].append(query_list_temp)
-        value["squery_list"].append(squery_list_temp)
-    return json.dumps(value)
-
-@app.route("/example_image_query")
-def example_image_query():
-    example_request_url = "https://maps.googleapis.com/maps/api/streetview?size=640x640&location=42.348444,-71.1069238&pitch=0&heading=189.79759061610534&key=AIzaSyBIrPdfIZukUgSFn1eRNsiQMtW5i4mhkTk"
-    surl = sign_url(example_request_url)
-    res = requests.get(surl).content
-    with open('image_name.jpg', 'wb') as handler:
-        handler.write(res)
+    # here is the BASE_URL that we will call
+    BASE_URL = "https://maps.googleapis.com/maps/api/streetview"
+    # we are calculating the distance (in degrees) that is travelled between these coordinates
+    d = math.sqrt((xf - xi) * (xf - xi) + (yf - yi) * (yf - yi))
+    # this coefficient can be changed later
+    steps = int(d * 8000)
+    # now we calculate the distance of each step (for easy iteration)
+    dx = (xf - xi) / steps
+    dy = (yf - yi) / steps
+    # now we calculate the forward heading of this vector
+    base_heading = generate_base_heading(dy, dx)
+    # really quickly we create a list of headings to take pictures of
+    headings = [base_heading]
+    for _ in range(7):
+        base_heading = base_heading + 45
+        if base_heading > 360:
+            base_heading = base_heading - 360
+        headings.append(base_heading)
+    # quickly we prepare the other aspects of the URL
+    size = "?size=640x640"
+    pitch = "&pitch=0"
+    fov = "&fov=80"
+    api = "&key=" + API_KEY
+    # here is a variable we will store the API links in
+    point_list = []
+    for count in range(steps + 1):
+        x = xi + count * dx
+        y = yi + count * dy
+        # location parameter construction 
+        location = "&location=" + str(x) + "," + str(y) 
+        # we make a seperate api request for each heading
+        link_list = []
+        for heading in headings:
+            query = sign_url(BASE_URL + size + location + pitch + fov + "&heading=" + str(heading) + api)
+            link_list.append(query)
+        point_list.append(link_list)
+    if(call_static_image_api):
+        write_images(point_list)
     return [200]
+
+@app.route("/use_vision_example")
+def detect_labels():
+    """Detects labels in the file."""
+    from google.cloud import vision
+
+    client = vision.ImageAnnotatorClient()
+
+    with open("images/image66.jpg", "rb") as image_file:
+        content = image_file.read()
+
+    image = vision.Image(content=content)
+
+    response = client.label_detection(image=image)
+    labels = response.label_annotations
+    print("Labels:")
+
+    for label in labels:
+        print(label.description)
+
+    if response.error.message:
+        raise Exception(
+            "{}\nFor more info on error messages, check: "
+            "https://cloud.google.com/apis/design/errors".format(response.error.message)
+        )
     
-@app.route("/download_example_images")
-def example_image_download():
-    # We start from top of St. Mary to bottom of St. Mary
-    # api_key + url + path
-    api_key = config.map_api_key
-    base_url = "https://maps.googleapis.com"
-    path = "/maps/api/streetview"
-    # provided road start and stop
-    initial_x = 42.348444
-    initial_y = -71.1069238
-    final_x = 42.347162
-    final_y = -71.1071453
-    # generate step values
-    x_step = (final_x - initial_x) / 10
-    y_step = (final_y - initial_y) / 10
+    return [200]
