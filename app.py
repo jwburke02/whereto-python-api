@@ -1,14 +1,11 @@
 
 from flask import Flask, request
-from utils import sign_url
 import requests
 import config
 import math
-import os
-from google.cloud import vision
-import io
-import json
 from ultralytics import YOLO
+from PIL import Image
+import io
 
 app = Flask(__name__)
 
@@ -169,9 +166,11 @@ def query_with_loc_and_rad():
                 api = "&key=" + config.map_api_key
                 for heading in headings:
                     img = requests.get("https://maps.googleapis.com/maps/api/streetview" + size + location + pitch + fov + "&heading=" + str(heading) + api).content
-                    with open("temp.jpg", 'wb') as handler:
-                        handler.write(img)
-                    results = meters.predict("temp.jpg")
+                    image = Image.open(io.BytesIO(img))
+                    #with open("temp.jpg", 'wb') as handler:
+                    #    handler.write(img)
+                    #results = meters.predict("temp.jpg")
+                    results = meters.predict(image)
                     result = results[0]
                     if len(result.boxes):
                         print("Image Analyzed - Meter Found")
