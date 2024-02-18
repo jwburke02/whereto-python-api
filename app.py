@@ -5,6 +5,8 @@ import config
 import math
 import os
 from ultralytics import YOLO
+from PIL import Image
+import io
 
 app = Flask(__name__)
 
