@@ -3,6 +3,7 @@ from flask import Flask, request
 import requests
 import config
 import math
+import os
 from ultralytics import YOLO
 from PIL import Image
 import io
@@ -72,7 +73,7 @@ def query_with_loc_and_rad():
     # UTILIZE QUERY #
     #################
     bbox = str(left) + ',' + str(bottom) + ',' + str(right) + ',' + str(top)
-    hwy_list = ["primary", "secondary", "tertiary", "residential"]
+    hwy_list = ["primary", "secondary", "tertiary", "residential", "living_street", "road", "trunk"]
     geo_data_response = {}
     for hwy in hwy_list:
         tags = "highway=" + hwy
@@ -148,47 +149,107 @@ def query_with_loc_and_rad():
     ##########################################################################################################
     # FOR EACH STREET IN STREET_COORD_LIST, GO DOWN THE STREET BY COORDINATE AND RUN EACH THROUGH ML PROCESS #
     ##########################################################################################################
+    examined_locations = []
     size = "?size=640x640"
     pitch = "&pitch=0"
     fov = "&fov=80"
     meter_coord_list = []
     for street in street_coord_list:
         for ind in range(len(street_coord_list[street])):
-            if ind % 4 == 0 and ind != len(street_coord_list[street]) - 1:
-                dy = street_coord_list[street][ind + 1][1] - street_coord_list[street][ind][1]
-                dx = street_coord_list[street][ind + 1][0] - street_coord_list[street][ind][0]
+            if ind % 1 == 0 and ind != len(street_coord_list[street]) - 1:
+                xi = street_coord_list[street][ind][0]
+                xf = street_coord_list[street][ind + 1][0]
+                yi = street_coord_list[street][ind][1]
+                yf = street_coord_list[street][ind + 1][1]
+                dy = yf - yi
+                dx = xf - xi
                 base_heading = generate_base_heading(dy, dx)
                 headings = [base_heading]
                 for _ in range(7):
                     base_heading = (base_heading + 45) % 360
                     headings.append(base_heading)
-                location = "&location=" + str(street_coord_list[street][ind][1]) + "," + str(street_coord_list[street][ind][0])
+                d = math.sqrt((xf - xi) ** 2 + (yf - yi) ** 2)
+                steps = int(d * 2000)
+                steps = steps + 1
+                dx = (xf - xi) / steps
+                dy = (yf - yi) / steps
                 api = "&key=" + config.map_api_key
-                for heading in headings:
-                    img = requests.get("https://maps.googleapis.com/maps/api/streetview" + size + location + pitch + fov + "&heading=" + str(heading) + api).content
-                    image = Image.open(io.BytesIO(img))
-                    #with open("temp.jpg", 'wb') as handler:
-                    #    handler.write(img)
-                    #results = meters.predict("temp.jpg")
-                    results = meters.predict(image)
-                    result = results[0]
-                    if len(result.boxes):
-                        print("Image Analyzed - Meter Found")
-                        best_conf = 0
-                        for box in result.boxes:
-                            conf = box.conf[0].item()
-                            if conf > best_conf:
-                                best_conf = conf
-                        y = street_coord_list[street][ind][1]
-                        x = street_coord_list[street][ind][0]
-                        temp = [x, y, best_conf]
-                        meter_coord_list.append(temp)
-                    else:
-                        print("Image Analyzed - Meter Not Found")
-                        continue
+                for count in range(steps + 1):
+                    y = xi + count * dx
+                    x = yi + count * dy
+                    location = "&location=" + str(x) + "," + str(y)
+                    print([x, y])
+                    examined_locations.append([x, y])
+                    count = count + 1 
+                    for heading in headings:
+                        img = requests.get("https://maps.googleapis.com/maps/api/streetview" + size + location + pitch + fov + "&heading=" + str(heading) + api).content
+                        with open("temp.jpg", 'wb') as handler:
+                            handler.write(img)
+                        results = meters.predict("temp.jpg")
+                        result = results[0]
+                        if len(result.boxes):
+                            print("Image Analyzed - Meter Found")
+                            best_conf = 0
+                            for box in result.boxes:
+                                conf = box.conf[0].item()
+                                if conf > best_conf:
+                                    best_conf = conf
+                            y = street_coord_list[street][ind][1]
+                            x = street_coord_list[street][ind][0]
+                            temp = [x, y, best_conf]
+                            meter_coord_list.append(temp)
+                        else:
+                            print("Image Analyzed - Meter Not Found")
+                            continue
             else:
                 continue
     print(meter_coord_list)
+    ################################################################
+    ################################################################
+    """
+        PROOF OF CONCEPT: DISPLAY A RED MARKER FOR METER LOCATIONS
+    """
+    markers_string = "size:small|color:purple"
+    for coords_conf in meter_coord_list:
+        markers_string += '|' + (str(coords_conf[1]) + ',' + str(coords_conf[0]))
+    static_image_params = {
+        "key": config.map_api_key,
+        "center": (str(lat) + ',' + str(long)),
+        "zoom": 16,
+        "size": "640x640",
+        "scale": 2,
+        "markers": markers_string
+    }
+    img = requests.get("https://maps.googleapis.com/maps/api/staticmap", params=static_image_params).content
+    image_dir = "./map"
+    if not os.path.exists(image_dir):
+        os.makedirs(image_dir)
+    file_path = os.path.join(image_dir, "mapexample.jpg")
+    with open(file_path, 'wb') as handler:
+        handler.write(img)
+    """
+        MAP OUT EVERY VISITED COORDINATE
+    """
+    markers_string = "size:small|color:green"
+    for location in examined_locations:
+        markers_string += '|' + (str(location[0]) + ',' + str(location[1]))
+    static_image_params = {
+        "key": config.map_api_key,
+        "center": (str(lat) + ',' + str(long)),
+        "zoom": 16,
+        "size": "640x640",
+        "scale": 2,
+        "markers": markers_string
+    }
+    img = requests.get("https://maps.googleapis.com/maps/api/staticmap", params=static_image_params).content
+    image_dir = "./map"
+    if not os.path.exists(image_dir):
+        os.makedirs(image_dir)
+    file_path = os.path.join(image_dir, "visited.jpg")
+    with open(file_path, 'wb') as handler:
+        handler.write(img)
+    ################################################################
+    ################################################################
     return "Success", 200
 
 if __name__ == '__main__':
