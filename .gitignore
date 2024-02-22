@@ -2,3 +2,5 @@ venv
 config.py
 __pycache__
 images
+map*
+temp*
