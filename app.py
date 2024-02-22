@@ -7,6 +7,7 @@ import os
 from ultralytics import YOLO
 from PIL import Image
 import io
+import json
 
 app = Flask(__name__)
 
@@ -149,18 +150,22 @@ def query_with_loc_and_rad():
     ##########################################################################################################
     # FOR EACH STREET IN STREET_COORD_LIST, GO DOWN THE STREET BY COORDINATE AND RUN EACH THROUGH ML PROCESS #
     ##########################################################################################################
-    examined_locations = []
+    examined_locations = {}
     size = "?size=640x640"
     pitch = "&pitch=0"
     fov = "&fov=80"
-    meter_coord_list = []
     for street in street_coord_list:
-        for ind in range(len(street_coord_list[street])):
-            if ind % 1 == 0 and ind != len(street_coord_list[street]) - 1:
-                xi = street_coord_list[street][ind][0]
-                xf = street_coord_list[street][ind + 1][0]
-                yi = street_coord_list[street][ind][1]
-                yf = street_coord_list[street][ind + 1][1]
+        examined_locations[street] = {
+            "coordinates": [],
+            "detections": []
+        }
+        
+        for idx in range(len(street_coord_list[street])): # iterate through each coordinate in the street segment
+            if idx != len(street_coord_list[street]) - 1:
+                xi = street_coord_list[street][idx][0]
+                xf = street_coord_list[street][idx + 1][0]
+                yi = street_coord_list[street][idx][1]
+                yf = street_coord_list[street][idx + 1][1]
                 dy = yf - yi
                 dx = xf - xi
                 base_heading = generate_base_heading(dy, dx)
@@ -169,7 +174,7 @@ def query_with_loc_and_rad():
                     base_heading = (base_heading + 45) % 360
                     headings.append(base_heading)
                 d = math.sqrt((xf - xi) ** 2 + (yf - yi) ** 2)
-                steps = int(d * 2000)
+                steps = int(d * 500)
                 steps = steps + 1
                 dx = (xf - xi) / steps
                 dy = (yf - yi) / steps
@@ -179,7 +184,7 @@ def query_with_loc_and_rad():
                     x = yi + count * dy
                     location = "&location=" + str(x) + "," + str(y)
                     print([x, y])
-                    examined_locations.append([x, y])
+                    examined_locations[street]["coordinates"].append([x, y])
                     count = count + 1 
                     for heading in headings:
                         img = requests.get("https://maps.googleapis.com/maps/api/streetview" + size + location + pitch + fov + "&heading=" + str(heading) + api).content
@@ -189,25 +194,31 @@ def query_with_loc_and_rad():
                         result = results[0]
                         if len(result.boxes):
                             print("Image Analyzed - Meter Found")
-                            best_conf = 0
+                            conf = 0
+                            classifier = ""
                             for box in result.boxes:
-                                conf = box.conf[0].item()
-                                if conf > best_conf:
-                                    best_conf = conf
-                            y = street_coord_list[street][ind][1]
-                            x = street_coord_list[street][ind][0]
-                            temp = [x, y, best_conf]
-                            meter_coord_list.append(temp)
+                                confidence = box.conf[0].item()
+                                if confidence > conf:
+                                    conf = confidence
+                                    classifier = result.names[box.cls[0].item()]
+                            y = street_coord_list[street][idx][1]
+                            x = street_coord_list[street][idx][0]
+                            temp = {
+                                "class": classifier,
+                                "lat": x,
+                                "lng": y,
+                                "conf": confidence
+                            }
+                            examined_locations[street]["detections"].append(temp)
                         else:
                             print("Image Analyzed - Meter Not Found")
                             continue
-            else:
-                continue
-    print(meter_coord_list)
+    print(examined_locations)
     ################################################################
     ################################################################
     """
         PROOF OF CONCEPT: DISPLAY A RED MARKER FOR METER LOCATIONS
+    """
     """
     markers_string = "size:small|color:purple"
     for coords_conf in meter_coord_list:
@@ -228,7 +239,9 @@ def query_with_loc_and_rad():
     with open(file_path, 'wb') as handler:
         handler.write(img)
     """
+    """
         MAP OUT EVERY VISITED COORDINATE
+    """
     """
     markers_string = "size:small|color:green"
     for location in examined_locations:
@@ -250,8 +263,18 @@ def query_with_loc_and_rad():
         handler.write(img)
     ################################################################
     ################################################################
-    return "Success", 200
+    """
+    with open('temp.json', 'w') as fp:
+        json.dump(examined_locations, fp)
+    return examined_locations
+
+@app.route("/park/query_mock_response")
+def query_mock_response():
+    with open("temp.json") as f:
+        data = f.read()
+    data = json.loads(data)
+    return data
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)
 
