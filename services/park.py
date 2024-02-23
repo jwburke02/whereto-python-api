@@ -4,6 +4,8 @@ import requests
 import math
 import json
 from core import meters
+from PIL import Image 
+import io
 
 parser = reqparse.RequestParser() # to parse JSON request
 parser.add_argument('address', required=True, help="Address may not be blank...")
@@ -173,11 +175,11 @@ class ParkAPI(Resource):
                             print([x, y])
                             examined_locations[street]["coordinates"].append([x, y])
                             count = count + 1 
+                            img = []
                             for heading in headings:
-                                img = requests.get("https://maps.googleapis.com/maps/api/streetview" + size + location + pitch + fov + "&heading=" + str(heading) + api).content
-                                with open("temp.jpg", 'wb') as handler:
-                                    handler.write(img)
-                                results = meters.predict("temp.jpg")
+                                img.append(Image.open(io.BytesIO(requests.get("https://maps.googleapis.com/maps/api/streetview" + size + location + pitch + fov + "&heading=" + str(heading) + api).content)))
+                            for im in img:
+                                results = meters.predict(im)
                                 result = results[0]
                                 if len(result.boxes):
                                     print("Image Analyzed - Meter Found")
