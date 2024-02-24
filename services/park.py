@@ -61,9 +61,7 @@ class ParkAPI(Resource):
             ################## MAP DATA QUERY ##################
             street_coord_list = query_osm(lat, long, radius)
             ################## ML ######################
-            print(street_coord_list)
             examined_locations = run_model(street_coord_list)
-            print(examined_locations)
             display_map(radius, lat, long, examined_locations) # debug
             ################## /ML/ ######################
             with open('mock_data/temp.json', 'w') as fp:
