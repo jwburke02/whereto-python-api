@@ -21,7 +21,10 @@ def run_query(head_x_y):
     fov = "&fov=80"
     api = "&key=" + config.map_api_key
     location = "&location=" + str(x) + "," + str(y)
-    return Image.open(io.BytesIO(requests.get("https://maps.googleapis.com/maps/api/streetview" + size + location + pitch + fov + "&heading=" + str(heading) + api).content))
+    try:
+        return Image.open(io.BytesIO(requests.get("https://maps.googleapis.com/maps/api/streetview" + size + location + pitch + fov + "&heading=" + str(heading) + api).content))
+    except:
+        return None
 
 def run_model(street_coord_list):
     locations = {}
@@ -39,12 +42,12 @@ def run_model(street_coord_list):
                 dy = yf - yi
                 dx = xf - xi
                 base_heading = generate_base_heading(dy, dx)
-                headings = [base_heading]
-                for _ in range(7):
-                    base_heading = (base_heading + 45) % 360
+                headings = [base_heading + 45]
+                for _ in range(3):
+                    base_heading = (base_heading + 90) % 360
                     headings.append(base_heading)
                 d = math.sqrt((xf - xi) ** 2 + (yf - yi) ** 2)
-                steps = int(d * 500)
+                steps = int(d * 1000)
                 steps = steps + 1
                 dx = (xf - xi) / steps
                 dy = (yf - yi) / steps
@@ -67,6 +70,8 @@ def run_model(street_coord_list):
                         for result in pool.map(run_query, heading_x_ys):
                             img.append(result)
                     for im in img:
+                        if im is None:
+                            continue
                         results = meters.predict(im)
                         result = results[0]
                         if len(result.boxes):
@@ -90,3 +95,4 @@ def run_model(street_coord_list):
                         else:
                             print("Image Analyzed - Meter Not Found")
                             continue
+    return locations

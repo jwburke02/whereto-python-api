@@ -4,10 +4,32 @@ import requests
 import json
 from services.osm import query_osm
 from services.ml import run_model
+import os
 
 parser = reqparse.RequestParser() # to parse JSON request
 parser.add_argument('address', required=True, help="Address may not be blank...")
 parser.add_argument('radius', required=True, help="Radius cannot be blank...")
+
+def display_map(radius, lat, long, examined_locations):
+    markers_string = "size:small|color:green"
+    for street in examined_locations:
+        for location in examined_locations[street]['coordinates']:
+            markers_string += '|' + (str(location[0]) + ',' + str(location[1]))
+    static_image_params = {
+        "key": config.map_api_key,
+        "center": (str(lat) + ',' + str(long)),
+        "zoom": 16,
+        "size": "640x640",
+        "scale": 2,
+        "markers": markers_string
+    }
+    img = requests.get("https://maps.googleapis.com/maps/api/staticmap", params=static_image_params).content
+    image_dir = "./map"
+    if not os.path.exists(image_dir):
+        os.makedirs(image_dir)
+    file_path = os.path.join(image_dir, "visited.jpg")
+    with open(file_path, 'wb') as handler:
+        handler.write(img)
 
 class ParkAPI(Resource):
     def post(self):
@@ -39,15 +61,17 @@ class ParkAPI(Resource):
             ################## MAP DATA QUERY ##################
             street_coord_list = query_osm(lat, long, radius)
             ################## ML ######################
+            print(street_coord_list)
             examined_locations = run_model(street_coord_list)
             print(examined_locations)
+            display_map(radius, lat, long, examined_locations) # debug
             ################## /ML/ ######################
             with open('mock_data/temp.json', 'w') as fp:
                 json.dump(examined_locations, fp)
             return examined_locations
         except Exception as e:
             return {"Error": e}, 500
-
+        
 """
     PROOF OF CONCEPT: DISPLAY A RED MARKER FOR METER LOCATIONS
 """

@@ -29,30 +29,30 @@ def map_geo_data(old_data):
             for inner_pair in coordinate_list:
                 dist_vec.append(math.sqrt(math.pow(coordinate_pair[0]-inner_pair[0],2) + math.pow(coordinate_pair[1]-inner_pair[1],2)))
             dist_mat.append(dist_vec)
-    # USE DIST_MAT MAX INDICES AS SOURCES
-    max_list = []
-    for idx, _ in enumerate(coordinate_list):
-        dist_row = dist_mat[idx]
-        max_list.append(max(dist_row))
-    source_idx = max_list.index(max(max_list))
-    street_source[street] = (source_idx, coordinate_list[source_idx])
-    street_coord_in_order = []
-    source = street_source[street][0]
-    count = 0
-    while True:
-        if count > 200: # should never be here
-            break
-        count += 1
-        street_coord_in_order.append(coordinate_list[source])
-        coord = coordinate_list[source]
-        coordinate_list.pop(source)
-        d = []
-        if(len(coordinate_list) == 0):
-            break
-        for pair in coordinate_list:
-            d.append(math.sqrt(math.pow(pair[0]-coord[0],2) + math.pow(pair[1]-coord[1],2)))
-        source = d.index(min(d))
-    street_coord_list[street] = street_coord_in_order
+        # USE DIST_MAT MAX INDICES AS SOURCES
+        max_list = []
+        for idx, _ in enumerate(coordinate_list):
+            dist_row = dist_mat[idx]
+            max_list.append(max(dist_row))
+        source_idx = max_list.index(max(max_list))
+        street_source[street] = (source_idx, coordinate_list[source_idx])
+        street_coord_in_order = []
+        source = street_source[street][0]
+        count = 0
+        while True:
+            if count > 200: # should never be here
+                break
+            count += 1
+            street_coord_in_order.append(coordinate_list[source])
+            coord = coordinate_list[source]
+            coordinate_list.pop(source)
+            d = []
+            if(len(coordinate_list) == 0):
+                break
+            for pair in coordinate_list:
+                d.append(math.sqrt(math.pow(pair[0]-coord[0],2) + math.pow(pair[1]-coord[1],2)))
+            source = d.index(min(d))
+        street_coord_list[street] = street_coord_in_order
     
     return street_coord_list
 
