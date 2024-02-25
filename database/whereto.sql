@@ -8,6 +8,6 @@ create table detection (
     cid int not null,
     lat float not null,
     lng float not null,
-    class text not null,
+    class_name text not null,
     conf float not null
 );
