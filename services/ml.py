@@ -5,6 +5,7 @@ import requests
 import io
 from core import meters
 from multiprocessing.pool import ThreadPool
+from services.db import locationExists, getDetections
 
 def generate_base_heading(dy, dx):
     base_heading = math.atan2(dy, dx) * 180 / math.pi
@@ -56,43 +57,49 @@ def run_model(street_coord_list):
                     x = yi + count * dy
                     print([x, y])
                     locations[street]["coordinates"].append([x, y])
-                    count = count + 1 
-                    heading_x_ys = []
-                    for heading in headings:
-                        heading_x_y = {
-                            "head": heading,
-                            "x": x,
-                            "y": y
-                        }
-                        heading_x_ys.append(heading_x_y)
-                    img = []
-                    with ThreadPool() as pool:
-                        for result in pool.map(run_query, heading_x_ys):
-                            img.append(result)
-                    for im in img:
-                        if im is None:
-                            continue
-                        results = meters.predict(im)
-                        result = results[0]
-                        if len(result.boxes):
-                            print("Image Analyzed - Meter Found")
-                            conf = 0
-                            classifier = ""
-                            for box in result.boxes:
-                                confidence = box.conf[0].item()
-                                if confidence > conf:
-                                    conf = confidence
-                                    classifier = result.names[box.cls[0].item()]
-                            y = street_coord_list[street][idx][1]
-                            x = street_coord_list[street][idx][0]
-                            temp = {
-                                "class": classifier,
-                                "lat": x,
-                                "lng": y,
-                                "conf": confidence
+                    if locationExists([x, y]):
+                        try:
+                            locations[street]["detections"].append(getDetections([x, y]))
+                        except:
+                            locations[street]["detections"].append([])
+                    else:
+                        count = count + 1 
+                        heading_x_ys = []
+                        for heading in headings:
+                            heading_x_y = {
+                                "head": heading,
+                                "x": x,
+                                "y": y
                             }
-                            locations[street]["detections"].append(temp)
-                        else:
-                            print("Image Analyzed - Meter Not Found")
-                            continue
+                            heading_x_ys.append(heading_x_y)
+                        img = []
+                        with ThreadPool() as pool:
+                            for result in pool.map(run_query, heading_x_ys):
+                                img.append(result)
+                        for im in img:
+                            if im is None:
+                                continue
+                            results = meters.predict(im)
+                            result = results[0]
+                            if len(result.boxes):
+                                print("Image Analyzed - Meter Found")
+                                conf = 0
+                                classifier = ""
+                                for box in result.boxes:
+                                    confidence = box.conf[0].item()
+                                    if confidence > conf:
+                                        conf = confidence
+                                        classifier = result.names[box.cls[0].item()]
+                                y = street_coord_list[street][idx][1]
+                                x = street_coord_list[street][idx][0]
+                                temp = {
+                                    "class": classifier,
+                                    "lat": x,
+                                    "lng": y,
+                                    "conf": confidence
+                                }
+                                locations[street]["detections"].append(temp)
+                            else:
+                                print("Image Analyzed - Meter Not Found")
+                                continue
     return locations

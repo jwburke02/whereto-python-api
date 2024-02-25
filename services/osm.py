@@ -3,7 +3,18 @@ import config
 import math
 import requests
 
-def map_geo_data(old_data):
+def fits(point, b_box):
+    if point[1] < b_box[0]:
+        return False
+    if point[1] > b_box[2]:
+        return False
+    if point[0] > b_box[1]:
+        return False
+    if point[0] < b_box[3]:
+        return False
+    return True
+
+def map_geo_data(old_data, b_box):
     new_data = {} # we are going to index by street
     for point in old_data:
         street_name = point.get("properties").get("name")
@@ -67,6 +78,7 @@ def query_osm(lat, lng, rad):
     top = lat + off_lat
     left = lng - off_lng
     right = lng + off_lng
+    b_box = [left, top, right, bottom]
     bbox = str(left) + ',' + str(bottom) + ',' + str(right) + ',' + str(top)
     geo_data_params = {
         "api_key": config.osm_extract_key,
@@ -74,4 +86,4 @@ def query_osm(lat, lng, rad):
         "tags": "highway=*" 
     }
     # this returned function will map the response to something more usable by our ParkAPI
-    return map_geo_data(requests.get(config.osm_extract_http, params=geo_data_params).json().get("features"))
+    return map_geo_data(requests.get(config.osm_extract_http, params=geo_data_params).json().get("features"), b_box)
