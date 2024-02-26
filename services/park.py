@@ -31,6 +31,27 @@ def display_map(radius, lat, long, examined_locations):
     with open(file_path, 'wb') as handler:
         handler.write(img)
 
+def display_detections(radius, lat, long, examined_locations):
+    markers_string = "size:small|color:purple"
+    for street in examined_locations:
+        for detection in examined_locations[street]['detections']:
+            markers_string += '|' + (str(detection['lat']) + ',' + str(detection['lng']))
+    static_image_params = {
+        "key": config.map_api_key,
+        "center": (str(lat) + ',' + str(long)),
+        "zoom": 16,
+        "size": "640x640",
+        "scale": 2,
+        "markers": markers_string
+    }
+    img = requests.get("https://maps.googleapis.com/maps/api/staticmap", params=static_image_params).content
+    image_dir = "./map"
+    if not os.path.exists(image_dir):
+        os.makedirs(image_dir)
+    file_path = os.path.join(image_dir, "mapexample.jpg")
+    with open(file_path, 'wb') as handler:
+        handler.write(img)
+
 class ParkAPI(Resource):
     def post(self):
         try:
@@ -63,6 +84,7 @@ class ParkAPI(Resource):
             ################## ML ######################
             examined_locations = run_model(street_coord_list)
             display_map(radius, lat, long, examined_locations) # debug
+            display_detections(radius, lat, long, examined_locations) # debug
             ################## /ML/ ######################
             with open('mock_data/temp.json', 'w') as fp:
                 json.dump(examined_locations, fp)
