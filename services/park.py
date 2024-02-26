@@ -5,6 +5,7 @@ import json
 from services.osm import query_osm
 from services.ml import run_model
 import os
+import math
 
 parser = reqparse.RequestParser() # to parse JSON request
 parser.add_argument('address', required=True, help="Address may not be blank...")
@@ -37,7 +38,7 @@ def display_detections(radius, lat, long, examined_locations):
     markers_string = "size:small|color:purple"
     for street in examined_locations:
         if street == 'radius' or street == 'center_lat' or street == 'center_lng':
-            continue
+             continue
         for detection in examined_locations[street]['detections']:
             markers_string += '|' + (str(detection['lat']) + ',' + str(detection['lng']))
     static_image_params = {
@@ -97,4 +98,5 @@ class ParkAPI(Resource):
                 json.dump(examined_locations, fp)
             return examined_locations
         except Exception as e:
+            print(e)
             return "Error with your request...", 500

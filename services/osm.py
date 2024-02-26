@@ -4,13 +4,13 @@ import math
 import requests
 
 def fits(point, b_box):
-    if point[1] < b_box[0]:
+    if point[0] < b_box[0]:
         return False
-    if point[1] > b_box[2]:
+    if point[0] > b_box[2]:
         return False
-    if point[0] > b_box[1]:
+    if point[1] > b_box[1]:
         return False
-    if point[0] < b_box[3]:
+    if point[1] < b_box[3]:
         return False
     return True
 
@@ -18,23 +18,30 @@ def map_geo_data(old_data, b_box):
     new_data = {} # we are going to index by street
     for point in old_data:
         street_name = point.get("properties").get("name")
-        if point.get("properties").get("highway") == "bus_stop" or point.get("properties").get("highway") == "motorway":
+        if point.get("properties").get("highway") == "bus_stop" or point.get("properties").get("highway") == "motorway" or point.get("properties").get("highway") == "pedestrian":
             continue
         if street_name is None:
             continue
         if new_data.get(street_name) is None: # first time seeing street
-            if point.get("geometry").get("coordinates") is not None:
-                new_data[street_name] = point.get("geometry").get("coordinates")[0]
+            if point.get("geometry").get("coordinates")[0] is not None:
+                new_data[street_name] = []
+                for coordinate in point.get("geometry").get("coordinates")[0]:
+                    if fits(coordinate, b_box):
+                        new_data[street_name].append(coordinate)
         else: # here we have to append to existing street info
             temp_list = new_data.get(street_name)
-            if point.get("geometry").get("coordinates") is not None:
-                temp_list.extend(point.get("geometry").get("coordinates")[0])
+            if point.get("geometry").get("coordinates")[0] is not None:
+                for coordinate in point.get("geometry").get("coordinates")[0]:
+                    if fits(coordinate, b_box):
+                        temp_list.append(coordinate)
             new_data[street_name] = temp_list
     # we have street level data, place coordinates in the correct order:
     street_source = {}
     street_coord_list = {}
     for street in new_data:
         coordinate_list = new_data[street]
+        if len(coordinate_list) == 0:
+            continue
         # EVALUATE EVERY DISTANCE
         dist_mat = []
         for coordinate_pair in coordinate_list:
@@ -86,4 +93,4 @@ def query_osm(lat, lng, rad):
         "tags": "highway=*" 
     }
     # this returned function will map the response to something more usable by our ParkAPI
-    return map_geo_data(requests.get(config.osm_extract_http, params=geo_data_params).json().get("features"), b_box)
+    return map_geo_data(requests.get(config.osm_extract_http, params=geo_data_params, verify=False).json().get("features"), b_box)
