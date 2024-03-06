@@ -57,12 +57,13 @@ def getDetections(cid):
         results = detection.query.filter_by(cid=cid)
         for result in results:
             new_result = {
+                "did": result.did,
                 "class_name": result.class_name,
                 "lat": result.lat,
                 "lng": result.lng,
                 "conf": result.conf,
                 "text_read": result.text_read,
-                "image_url": result.image_url
+                "image_url": None
             }
             detections.append(new_result)
         return detections
@@ -92,3 +93,6 @@ def writeDetection(data, cid):
     new_detect = detection(rand, cid, data['lat'], data['lng'], data['class_name'], data['conf'], data['text_read'], data['image_url'])
     db.session.add(new_detect)
     db.session.commit()
+    data['did'] = rand
+    data['image_url'] = None
+    return data

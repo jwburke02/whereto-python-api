@@ -96,9 +96,11 @@ def run_model(street_coord_list):
                                 print("Image Analyzed - Meter Found")
                                 for box in result.boxes: # iterate through detections
                                     # we use x (lat) and y (lng) + heading (im[2]['head']) to guess real placement of these objects
-                                    w = .00008 # some coordinate offset, about 30ish feet
-                                    guessed_lat = x + w * math.cos(im[2]['head'])
-                                    guessed_lng = y + w * math.sin(im[2]['head'])
+                                    w = .0001 # some coordinate offset, about 30ish feet
+                                    # k = .00005 # smaller coordinate offset for offset from average_x_norm
+                                    # average_x_norm = ((box.xyxy.data[0].data[0].item() + box.xyxy.data[0].data[2].item())/2)/640
+                                    guessed_lat = x + w * math.cos(im[2]['head'])# + average_x_norm * 60 - 30) + abs(average_x_norm - .5) * k
+                                    guessed_lng = y + w * math.sin(im[2]['head'])# + average_x_norm * 60 - 30) + abs(average_x_norm - .5) * k
                                     temp = {
                                         "class_name": result.names[box.cls[0].item()],
                                         "lat": guessed_lat,
@@ -107,9 +109,8 @@ def run_model(street_coord_list):
                                         "image_url": im[1],
                                         "text_read": None
                                     }
-                                    if box.conf[0].item() > .7: # only write if were confident
-                                        writeDetection(temp, new_cid)
-                                        locations[street]["detections"].append(temp)
+                                    if box.conf[0].item() > .75: # only write if we're confident
+                                        locations[street]["detections"].append(writeDetection(temp, new_cid))
                             else:
                                 print("Image Analyzed - Meter Not Found")
                                 continue
