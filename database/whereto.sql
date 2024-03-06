@@ -9,5 +9,7 @@ create table detection (
     lat float not null,
     lng float not null,
     class_name text not null,
-    conf float not null
+    conf float not null,
+    text_read text,
+    image_url text not null
 );
