@@ -114,7 +114,7 @@ def run_model(street_coord_list):
                                     "image_url": im[1],
                                     "text_read": None
                                 }
-                                if box.conf[0].item() > .75: # only write if we're confident
+                                if conf > .75: # only write if we're confident
                                     locations[street]["detections"].append(writeDetection(temp, new_cid))
                             else:
                                 print("Image Analyzed - Meter Not Found")
