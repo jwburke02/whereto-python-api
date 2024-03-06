@@ -94,23 +94,28 @@ def run_model(street_coord_list):
                             result = results[0]
                             if len(result.boxes):
                                 print("Image Analyzed - Meter Found")
+                                classifier = ""
+                                conf = 0
                                 for box in result.boxes: # iterate through detections
-                                    # we use x (lat) and y (lng) + heading (im[2]['head']) to guess real placement of these objects
-                                    w = .0001 # some coordinate offset, about 30ish feet
-                                    # k = .00005 # smaller coordinate offset for offset from average_x_norm
-                                    # average_x_norm = ((box.xyxy.data[0].data[0].item() + box.xyxy.data[0].data[2].item())/2)/640
-                                    guessed_lat = x + w * math.cos(im[2]['head'])# + average_x_norm * 60 - 30) + abs(average_x_norm - .5) * k
-                                    guessed_lng = y + w * math.sin(im[2]['head'])# + average_x_norm * 60 - 30) + abs(average_x_norm - .5) * k
-                                    temp = {
-                                        "class_name": result.names[box.cls[0].item()],
-                                        "lat": guessed_lat,
-                                        "lng": guessed_lng,
-                                        "conf": box.conf[0].item(),
-                                        "image_url": im[1],
-                                        "text_read": None
-                                    }
-                                    if box.conf[0].item() > .75: # only write if we're confident
-                                        locations[street]["detections"].append(writeDetection(temp, new_cid))
+                                    if box.conf[0].item() > conf:
+                                        conf = box.conf[0].item()
+                                        classifier = result.names[box.cls[0].item()]
+                                # we use x (lat) and y (lng) + heading (im[2]['head']) to guess real placement of these objects
+                                w = .0001 # some coordinate offset, about 30ish feet
+                                # k = .00005 # smaller coordinate offset for offset from average_x_norm
+                                # average_x_norm = ((box.xyxy.data[0].data[0].item() + box.xyxy.data[0].data[2].item())/2)/640
+                                guessed_lat = x + w * math.cos(im[2]['head'])# + average_x_norm * 60 - 30) + abs(average_x_norm - .5) * k
+                                guessed_lng = y + w * math.sin(im[2]['head'])# + average_x_norm * 60 - 30) + abs(average_x_norm - .5) * k
+                                temp = {
+                                    "class_name": classifier,
+                                    "lat": guessed_lat,
+                                    "lng": guessed_lng,
+                                    "conf": conf,
+                                    "image_url": im[1],
+                                    "text_read": None
+                                }
+                                if box.conf[0].item() > .75: # only write if we're confident
+                                    locations[street]["detections"].append(writeDetection(temp, new_cid))
                             else:
                                 print("Image Analyzed - Meter Not Found")
                                 continue
