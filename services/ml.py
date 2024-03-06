@@ -7,6 +7,8 @@ from core import model
 from multiprocessing.pool import ThreadPool
 from services.db import locationExists, getDetections, writeDetection, writeCoordinate
 import math
+import base64
+from services.text import detect_text
 
 def generate_base_heading(dy, dx):
     base_heading = math.atan2(dy, dx) * 180 / math.pi
@@ -114,6 +116,14 @@ def run_model(street_coord_list):
                                     "image_url": im[1],
                                     "text_read": None
                                 }
+                                # We need to check if the classifier is road sign, if so read text and return
+                                if classifier == "Road Sign":
+                                    # first we convert PIL to image
+                                    buffered = io.BytesIO()
+                                    im[0].save(buffered, format="JPEG")
+                                    img_str = buffered.getvalue()
+                                    text_read = detect_text(img_str)
+                                    temp['text_read'] = text_read
                                 if conf > .75: # only write if we're confident
                                     locations[street]["detections"].append(writeDetection(temp, new_cid))
                             else:
