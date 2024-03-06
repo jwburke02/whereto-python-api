@@ -3,7 +3,7 @@ import config
 from PIL import Image
 import requests
 import io
-from core import meters
+from core import model
 from multiprocessing.pool import ThreadPool
 from services.db import locationExists, getDetections, writeDetection, writeCoordinate
 
@@ -62,7 +62,13 @@ def run_model(street_coord_list):
                         try:
                             detections = getDetections(cid)
                             for detection in detections:
-                                locations[street]["detections"].append(detection)
+                                temp_list = locations[street]["detections"]
+                                already_detected = False
+                                for item in temp_list:
+                                    if item == detection:
+                                        already_detected = True
+                                if not already_detected:
+                                    locations[street]["detections"].append(detection)
                         except Exception as e:
                             print(e)
                     else:
@@ -83,7 +89,7 @@ def run_model(street_coord_list):
                         for im in img:
                             if im is None:
                                 continue
-                            results = meters.predict(im)
+                            results = model.predict(im)
                             result = results[0]
                             if len(result.boxes):
                                 print("Image Analyzed - Meter Found")
