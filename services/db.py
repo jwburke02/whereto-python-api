@@ -24,14 +24,18 @@ class detection(db.Model):
     lng = db.Column(db.Float, nullable=False)
     class_name = db.Column(db.String, nullable=False)
     conf = db.Column(db.Float, nullable=False)
+    text_read = db.Column(db.String, nullable=True)
+    image_url = db.Column(db.String, nullable=False)
 
-    def __init__(self, did, cid, lat, lng, class_name, conf):
+    def __init__(self, did, cid, lat, lng, class_name, conf, text_read, image_url):
         self.cid = cid
         self.did = did
         self.lat = lat
         self.lng = lng
         self.class_name = class_name
         self.conf = conf
+        self.text_read = text_read
+        self.image_url = image_url
 
     def __repr__(self) -> str:
         return super().__repr__()
@@ -56,7 +60,9 @@ def getDetections(cid):
                 "class_name": result.class_name,
                 "lat": result.lat,
                 "lng": result.lng,
-                "conf": result.conf
+                "conf": result.conf,
+                "text_read": result.text_read,
+                "image_url": result.image_url
             }
             detections.append(new_result)
         return detections
@@ -65,7 +71,7 @@ def getDetections(cid):
     
 def writeCoordinate(point):
     min = 1
-    max = 1000000
+    max = 100000000
     rand = randint(min, max)
     while detection.query.filter_by(did=rand).limit(1).first() is not None:
         rand = randint(min, max)
@@ -78,11 +84,11 @@ def writeCoordinate(point):
     
 def writeDetection(data, cid):
     min = 1
-    max = 1000000
+    max = 100000000
     rand = randint(min, max)
     while detection.query.filter_by(did=rand).limit(1).first() is not None:
         rand = randint(min, max)
     # now rand is our id
-    new_detect = detection(rand, cid, data['lat'], data['lng'], data['class_name'], data['conf'])
+    new_detect = detection(rand, cid, data['lat'], data['lng'], data['class_name'], data['conf'], data['text_read'], data['image_url'])
     db.session.add(new_detect)
     db.session.commit()

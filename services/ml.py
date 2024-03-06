@@ -23,7 +23,7 @@ def run_query(head_x_y):
     api = "&key=" + config.map_api_key
     location = "&location=" + str(x) + "," + str(y)
     try:
-        return Image.open(io.BytesIO(requests.get("https://maps.googleapis.com/maps/api/streetview" + size + location + pitch + fov + "&heading=" + str(heading) + api).content))
+        return [Image.open(io.BytesIO(requests.get("https://maps.googleapis.com/maps/api/streetview" + size + location + pitch + fov + "&heading=" + str(heading) + api).content)), "https://maps.googleapis.com/maps/api/streetview" + size + location + pitch + fov + "&heading=" + str(heading) + api]
     except:
         return None
 
@@ -89,7 +89,7 @@ def run_model(street_coord_list):
                         for im in img:
                             if im is None:
                                 continue
-                            results = model.predict(im)
+                            results = model.predict(im[0])
                             result = results[0]
                             if len(result.boxes):
                                 print("Image Analyzed - Meter Found")
@@ -106,7 +106,9 @@ def run_model(street_coord_list):
                                     "class_name": classifier,
                                     "lat": x,
                                     "lng": y,
-                                    "conf": confidence
+                                    "conf": confidence,
+                                    "image_url": im[1],
+                                    "text_read": None
                                 }
                                 writeDetection(temp, new_cid)
                                 locations[street]["detections"].append(temp)
