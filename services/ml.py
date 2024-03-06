@@ -3,9 +3,12 @@ import config
 from PIL import Image
 import requests
 import io
-from core import meters
+from core import model
 from multiprocessing.pool import ThreadPool
 from services.db import locationExists, getDetections, writeDetection, writeCoordinate
+import math
+import base64
+from services.text import detect_text
 
 def generate_base_heading(dy, dx):
     base_heading = math.atan2(dy, dx) * 180 / math.pi
@@ -23,7 +26,7 @@ def run_query(head_x_y):
     api = "&key=" + config.map_api_key
     location = "&location=" + str(x) + "," + str(y)
     try:
-        return Image.open(io.BytesIO(requests.get("https://maps.googleapis.com/maps/api/streetview" + size + location + pitch + fov + "&heading=" + str(heading) + api).content))
+        return [Image.open(io.BytesIO(requests.get("https://maps.googleapis.com/maps/api/streetview" + size + location + pitch + fov + "&heading=" + str(heading) + api).content)), "https://maps.googleapis.com/maps/api/streetview" + size + location + pitch + fov + "&heading=" + str(heading) + api, head_x_y]
     except:
         return None
 
@@ -62,7 +65,13 @@ def run_model(street_coord_list):
                         try:
                             detections = getDetections(cid)
                             for detection in detections:
-                                locations[street]["detections"].append(detection)
+                                temp_list = locations[street]["detections"]
+                                already_detected = False
+                                for item in temp_list:
+                                    if item == detection:
+                                        already_detected = True
+                                if not already_detected:
+                                    locations[street]["detections"].append(detection)
                         except Exception as e:
                             print(e)
                     else:
@@ -83,27 +92,40 @@ def run_model(street_coord_list):
                         for im in img:
                             if im is None:
                                 continue
-                            results = meters.predict(im)
+                            results = model.predict(im[0])
                             result = results[0]
                             if len(result.boxes):
                                 print("Image Analyzed - Meter Found")
-                                conf = 0
                                 classifier = ""
-                                for box in result.boxes:
-                                    confidence = box.conf[0].item()
-                                    if confidence > conf:
-                                        conf = confidence
+                                conf = 0
+                                for box in result.boxes: # iterate through detections
+                                    if box.conf[0].item() > conf:
+                                        conf = box.conf[0].item()
                                         classifier = result.names[box.cls[0].item()]
-                                # y = street_coord_list[street][idx][1]
-                                # x = street_coord_list[street][idx][0]
+                                # we use x (lat) and y (lng) + heading (im[2]['head']) to guess real placement of these objects
+                                w = .0001 # some coordinate offset, about 30ish feet
+                                # k = .00005 # smaller coordinate offset for offset from average_x_norm
+                                # average_x_norm = ((box.xyxy.data[0].data[0].item() + box.xyxy.data[0].data[2].item())/2)/640
+                                guessed_lat = x + w * math.cos(im[2]['head'])# + average_x_norm * 60 - 30) + abs(average_x_norm - .5) * k
+                                guessed_lng = y + w * math.sin(im[2]['head'])# + average_x_norm * 60 - 30) + abs(average_x_norm - .5) * k
                                 temp = {
                                     "class_name": classifier,
-                                    "lat": x,
-                                    "lng": y,
-                                    "conf": confidence
+                                    "lat": guessed_lat,
+                                    "lng": guessed_lng,
+                                    "conf": conf,
+                                    "image_url": im[1],
+                                    "text_read": None
                                 }
-                                writeDetection(temp, new_cid)
-                                locations[street]["detections"].append(temp)
+                                # We need to check if the classifier is road sign, if so read text and return
+                                if classifier == "Road Sign":
+                                    # first we convert PIL to image
+                                    buffered = io.BytesIO()
+                                    im[0].save(buffered, format="JPEG")
+                                    img_str = buffered.getvalue()
+                                    text_read = detect_text(img_str)
+                                    temp['text_read'] = text_read
+                                if conf > .75: # only write if we're confident
+                                    locations[street]["detections"].append(writeDetection(temp, new_cid))
                             else:
                                 print("Image Analyzed - Meter Not Found")
                                 continue
