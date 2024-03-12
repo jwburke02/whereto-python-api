@@ -96,3 +96,20 @@ def writeDetection(data, cid):
     data['did'] = rand
     data['image_url'] = None
     return data
+
+def readDetection(did):
+    try:
+        results = detection.query.filter_by(did=did)
+        for result in results:
+            new_result = {
+                "did": result.did,
+                "class_name": result.class_name,
+                "lat": result.lat,
+                "lng": result.lng,
+                "conf": result.conf,
+                "text_read": result.text_read,
+                "image_url": result.image_url
+            }
+            return new_result
+    except Exception as e:
+        print(e)
