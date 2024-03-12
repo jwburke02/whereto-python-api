@@ -3,7 +3,7 @@ from core import db
 from random import randint
 import requests
 
-# define the model
+################### MODEL DEFINITION #######################
 class coordinate(db.Model):
     cid = db.Column(db.Integer, primary_key=True)
     lat = db.Column(db.Float, nullable=False)
@@ -41,8 +41,10 @@ class detection(db.Model):
     def __repr__(self) -> str:
         return super().__repr__()
 
+###################### END MODEL DEFINITION #######################
 
-def locationExists(point):
+####################### DATABASE ACCESS FUNCTIONALITY #####################
+def locationExists(point): # function that will return if a point exists in our database yet
     try:
         result = coordinate.query.filter_by(lat=point[0], lng=point[1]).first()
         if (result):
@@ -52,7 +54,7 @@ def locationExists(point):
     except: 
         return None
 
-def getDetections(cid):
+def getDetections(cid): # function that will get every detection for a given CID in the database
     try:
         detections = []
         results = detection.query.filter_by(cid=cid)
@@ -71,7 +73,7 @@ def getDetections(cid):
     except Exception as e:
         print(e)
     
-def writeCoordinate(point):
+def writeCoordinate(point): # function taht will write a new coordinate to the database
     min = 1
     max = 100000000
     rand = randint(min, max)
@@ -84,7 +86,7 @@ def writeCoordinate(point):
     return rand
 
     
-def writeDetection(data, cid):
+def writeDetection(data, cid): # function that will write a new detection to the database
     min = 1
     max = 100000000
     rand = randint(min, max)
@@ -98,14 +100,14 @@ def writeDetection(data, cid):
     data['image_url'] = None
     return data
 
-def readDetection(did):
+def readDetection(did): # function that returns detailed information for a DID in the database
     try:
         results = detection.query.filter_by(did=did)
         for result in results:
             to_query = result.image_url
             image_data = requests.get(to_query).content
             base64_string = base64.b64encode(image_data)
-            im = base64_string.decode('utf-8')  # Convert bytes to string
+            im = base64_string.decode('utf-8')
             new_result = {
                 "did": result.did,
                 "class_name": result.class_name,
@@ -118,3 +120,5 @@ def readDetection(did):
             return new_result
     except Exception as e:
         print(e)
+
+####################### END DATABASE ACCESS FUNCTIONALITY #####################
