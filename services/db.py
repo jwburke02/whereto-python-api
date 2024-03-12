@@ -1,6 +1,7 @@
-from flask_sqlalchemy import SQLAlchemy
+import base64
 from core import db
 from random import randint
+import requests
 
 # define the model
 class coordinate(db.Model):
@@ -101,6 +102,10 @@ def readDetection(did):
     try:
         results = detection.query.filter_by(did=did)
         for result in results:
+            to_query = result.image_url
+            image_data = requests.get(to_query).content
+            base64_string = base64.b64encode(image_data)
+            im = base64_string.decode('utf-8')  # Convert bytes to string
             new_result = {
                 "did": result.did,
                 "class_name": result.class_name,
@@ -108,7 +113,7 @@ def readDetection(did):
                 "lng": result.lng,
                 "conf": result.conf,
                 "text_read": result.text_read,
-                "image_url": result.image_url
+                "image_data": im
             }
             return new_result
     except Exception as e:

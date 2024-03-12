@@ -7,7 +7,6 @@ from core import model
 from multiprocessing.pool import ThreadPool
 from services.db import locationExists, getDetections, writeDetection, writeCoordinate
 import math
-import base64
 from services.text import detect_text
 
 def generate_base_heading(dy, dx):
@@ -98,12 +97,14 @@ def run_model(street_coord_list):
                                 print("Image Analyzed - Meter Found")
                                 classifier = ""
                                 conf = 0
+                                box_info = None
                                 for box in result.boxes: # iterate through detections
                                     if box.conf[0].item() > conf:
                                         conf = box.conf[0].item()
                                         classifier = result.names[box.cls[0].item()]
+                                        box_info = box.xyxy.data[0]
                                 # we use x (lat) and y (lng) + heading (im[2]['head']) to guess real placement of these objects
-                                w = .0001 # some coordinate offset, about 30ish feet
+                                w = .00015 # some coordinate offset
                                 # k = .00005 # smaller coordinate offset for offset from average_x_norm
                                 # average_x_norm = ((box.xyxy.data[0].data[0].item() + box.xyxy.data[0].data[2].item())/2)/640
                                 guessed_lat = x + w * math.cos(im[2]['head'])# + average_x_norm * 60 - 30) + abs(average_x_norm - .5) * k
@@ -117,14 +118,30 @@ def run_model(street_coord_list):
                                     "text_read": None
                                 }
                                 # We need to check if the classifier is road sign, if so read text and return
-                                if classifier == "Road Sign":
+                                if classifier == "Road Sign" and conf > .6:
                                     # first we convert PIL to image
                                     buffered = io.BytesIO()
-                                    im[0].save(buffered, format="JPEG")
+                                    # crop im[0]
+                                    left = box_info.data[0].item() - 30
+                                    if left < 0:
+                                        left = 0
+                                    right = box_info.data[2].item() + 30
+                                    if right > 640:
+                                        right = 640
+                                    top = box_info.data[1].item() + 30
+                                    if top > 640:
+                                        top = 640
+                                    bottom = box_info.data[3].item() - 30
+                                    if bottom < 0:
+                                        bottom = 0
+                                    # print("LTRB: " + str(left) + str(top) + str(right) + str(bottom))
+                                    cropped_im = im[0].crop((left, 140, right, 500)) # anything below 540 will read google and block anyways..
+                                    # cropped_im.show()
+                                    cropped_im.save(buffered, format="JPEG")
                                     img_str = buffered.getvalue()
                                     text_read = detect_text(img_str)
                                     temp['text_read'] = text_read
-                                if conf > .75: # only write if we're confident
+                                if conf > .6: # only write if we're confident
                                     locations[street]["detections"].append(writeDetection(temp, new_cid))
                             else:
                                 print("Image Analyzed - Meter Not Found")
