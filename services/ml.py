@@ -104,7 +104,7 @@ def run_model(street_coord_list):
                                         classifier = result.names[box.cls[0].item()]
                                         box_info = box.xyxy.data[0]
                                 # we use x (lat) and y (lng) + heading (im[2]['head']) to guess real placement of these objects
-                                w = .0001 # some coordinate offset, about 30ish feet
+                                w = .00015 # some coordinate offset
                                 # k = .00005 # smaller coordinate offset for offset from average_x_norm
                                 # average_x_norm = ((box.xyxy.data[0].data[0].item() + box.xyxy.data[0].data[2].item())/2)/640
                                 guessed_lat = x + w * math.cos(im[2]['head'])# + average_x_norm * 60 - 30) + abs(average_x_norm - .5) * k
