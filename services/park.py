@@ -5,7 +5,6 @@ import json
 from services.osm import query_osm
 from services.ml import run_model
 import os
-import math
 
 parser = reqparse.RequestParser() # to parse JSON request
 parser.add_argument('address', required=True, help="Address may not be blank...")
