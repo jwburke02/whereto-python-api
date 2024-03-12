@@ -7,7 +7,6 @@ from core import model
 from multiprocessing.pool import ThreadPool
 from services.db import locationExists, getDetections, writeDetection, writeCoordinate
 import math
-import base64
 from services.text import detect_text
 
 def generate_base_heading(dy, dx):
@@ -98,10 +97,12 @@ def run_model(street_coord_list):
                                 print("Image Analyzed - Meter Found")
                                 classifier = ""
                                 conf = 0
+                                box_info = None
                                 for box in result.boxes: # iterate through detections
                                     if box.conf[0].item() > conf:
                                         conf = box.conf[0].item()
                                         classifier = result.names[box.cls[0].item()]
+                                        box_info = box.xyxy.data[0]
                                 # we use x (lat) and y (lng) + heading (im[2]['head']) to guess real placement of these objects
                                 w = .0001 # some coordinate offset, about 30ish feet
                                 # k = .00005 # smaller coordinate offset for offset from average_x_norm
@@ -120,7 +121,17 @@ def run_model(street_coord_list):
                                 if classifier == "Road Sign":
                                     # first we convert PIL to image
                                     buffered = io.BytesIO()
-                                    im[0].save(buffered, format="JPEG")
+                                    # crop im[0]
+                                    left = box.xyxy.data[0].data[0].item() - 40
+                                    if left < 0:
+                                        left = 0
+                                    right = box.xyxy.data[0].data[2].item() + 40
+                                    if right > 640:
+                                        right = 640
+                                    # print("LTRB: " + str(left) + str(top) + str(right) + str(bottom))
+                                    cropped_im = im[0].crop((left, 0, right, 600)) # anything below 600 will read google and block anyways..
+                                    # cropped_im.show()
+                                    cropped_im.save(buffered, format="JPEG")
                                     img_str = buffered.getvalue()
                                     text_read = detect_text(img_str)
                                     temp['text_read'] = text_read
