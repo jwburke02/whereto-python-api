@@ -3,7 +3,7 @@ import config
 import math
 import requests
 
-def fits(point, b_box):
+def fits(point, b_box): # helper function for staying within radial bounds
     if point[0] < b_box[0]:
         return False
     if point[0] > b_box[2]:
