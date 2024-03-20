@@ -70,7 +70,8 @@ def run_model(street_coord_list):
                                     if item == detection:
                                         already_detected = True
                                 if not already_detected:
-                                    locations[street]["detections"].append(detection)
+                                    if detection['conf'] > .75:
+                                        locations[street]["detections"].append(detection)
                         except Exception as e:
                             print(e)
                     else:
@@ -116,7 +117,7 @@ def run_model(street_coord_list):
                                     "text_read": None
                                 }
                                 # We need to check if the classifier is road sign, if so read text and return
-                                if classifier == "Road Sign" and conf > .6:
+                                if classifier == "Road Sign" and conf > .75:
                                     buffered = io.BytesIO()
                                     left = box_info.data[0].item() - 30
                                     if left < 0:
@@ -135,7 +136,7 @@ def run_model(street_coord_list):
                                     img_str = buffered.getvalue()
                                     text_read = detect_text(img_str)
                                     temp['text_read'] = text_read
-                                if conf > .6: # only write if we're confident
+                                if conf > .75: # only write if we're confident
                                     locations[street]["detections"].append(writeDetection(temp, new_cid))
                             else:
                                 print("Image Analyzed - Meter Not Found")
