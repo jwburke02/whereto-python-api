@@ -3,12 +3,14 @@ import config
 from PIL import Image
 import requests
 import io
-from core import model
+from WhereTo import model
 from multiprocessing.pool import ThreadPool
 from DatabaseAccess import locationExists, getDetections, writeDetection, writeCoordinate
 import math
 from TextProcessing import detect_text
 import logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 def generate_base_heading(dy, dx):
     base_heading = math.atan2(dy, dx) * 180 / math.pi
@@ -58,7 +60,7 @@ def run_model(street_coord_list):
                 for count in range(steps + 1):
                     y = xi + count * dx
                     x = yi + count * dy
-                    logging.debug([x, y])
+                    logger.debug([x, y])
                     locations[street]["coordinates"].append([x, y])
                     cid = locationExists([x, y])
                     if cid is not None:
@@ -74,7 +76,7 @@ def run_model(street_coord_list):
                                     if detection['conf'] > .75:
                                         locations[street]["detections"].append(detection)
                         except Exception as e:
-                            logging.debug(e)
+                            logger.debug(e)
                     else:
                         new_cid = writeCoordinate([x, y])
                         count = count + 1 
@@ -96,7 +98,7 @@ def run_model(street_coord_list):
                             results = model.predict(im[0])
                             result = results[0]
                             if len(result.boxes):
-                                logging.info("Image Analyzed - Meter Found")
+                                logger.debug("Image Analyzed - Meter Found")
                                 classifier = ""
                                 conf = 0
                                 box_info = None
@@ -140,6 +142,6 @@ def run_model(street_coord_list):
                                 if conf > .75: # only write if we're confident
                                     locations[street]["detections"].append(writeDetection(temp, new_cid))
                             else:
-                                logging.info("Image Analyzed - Meter Not Found")
+                                logger.debug("Image Analyzed - Meter Not Found")
                                 continue
     return locations

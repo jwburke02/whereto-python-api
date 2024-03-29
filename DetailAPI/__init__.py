@@ -2,6 +2,9 @@ from DatabaseAccess import readDetection
 import requests
 import config
 from flask_restful import Resource, reqparse
+import logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 class DetailAPI(Resource):
     def post(self): # endpoint delivers detailed information to the caller
@@ -17,5 +20,5 @@ class DetailAPI(Resource):
             result['address'] = response.json()['results'][0]['formatted_address']
             return result
         except Exception as e:
-            logging.debug(e)
+            logger.debug(e)
             return "Error with your request...", 500

@@ -4,6 +4,8 @@ import requests
 from OSM import query_osm
 from MachineLearning import run_model
 import logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 parser = reqparse.RequestParser() # to parse JSON request
 parser.add_argument('address', required=True, help="Address may not be blank...")
@@ -43,5 +45,5 @@ class ParkAPI(Resource):
             examined_locations['center_lng'] = long
             return examined_locations
         except Exception as e:
-            logging.error(e)
+            logger.debug(e)
             return "Error with your request...", 500
