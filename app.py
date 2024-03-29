@@ -1,5 +1,5 @@
-from services.park import ParkAPI
-from services.detail import DetailAPI
+from ParkAPI import ParkAPI
+from DetailAPI import DetailAPI
 from core import app, api
 
 api.add_resource(ParkAPI, '/park')

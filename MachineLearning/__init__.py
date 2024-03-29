@@ -5,9 +5,9 @@ import requests
 import io
 from core import model
 from multiprocessing.pool import ThreadPool
-from services.db import locationExists, getDetections, writeDetection, writeCoordinate
+from DatabaseAccess import locationExists, getDetections, writeDetection, writeCoordinate
 import math
-from services.text import detect_text
+from TextProcessing import detect_text
 
 def generate_base_heading(dy, dx):
     base_heading = math.atan2(dy, dx) * 180 / math.pi

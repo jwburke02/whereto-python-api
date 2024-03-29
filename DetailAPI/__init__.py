@@ -1,4 +1,4 @@
-from services.db import readDetection
+from DatabaseAccess import readDetection
 import requests
 import config
 from flask_restful import Resource, reqparse
