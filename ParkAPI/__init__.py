@@ -3,6 +3,7 @@ import config
 import requests
 from OSM import query_osm
 from MachineLearning import run_model
+import logging
 
 parser = reqparse.RequestParser() # to parse JSON request
 parser.add_argument('address', required=True, help="Address may not be blank...")
@@ -17,7 +18,7 @@ class ParkAPI(Resource):
             args = parser.parse_args()
             radius = float(args['radius'])
             address = args['address']
-            print("Received request -- Address: " + address + "; Radius: " + str(radius))
+            logging.info("Received request -- Address: " + address + "; Radius: " + str(radius))
             if radius is None:
                 return {"Error": "Parameter Error: No radius supplied"}, 400
             if address is None:
@@ -31,8 +32,6 @@ class ParkAPI(Resource):
             response = requests.get("https://maps.googleapis.com/maps/api/geocode/json", params=geocode_params)
             lat = response.json().get("results")[0].get("geometry").get("location").get("lat")
             long = response.json().get("results")[0].get("geometry").get("location").get("lng")
-            print("LAT: " + str(lat))
-            print("LONG: " + str(long))
             if long is None or lat is None:
                 return "Parameter Error: Issue with locating address", 500
             ################## MAP DATA QUERY ##################
@@ -44,5 +43,5 @@ class ParkAPI(Resource):
             examined_locations['center_lng'] = long
             return examined_locations
         except Exception as e:
-            print(e)
+            logging.error(e)
             return "Error with your request...", 500

@@ -8,6 +8,7 @@ from multiprocessing.pool import ThreadPool
 from DatabaseAccess import locationExists, getDetections, writeDetection, writeCoordinate
 import math
 from TextProcessing import detect_text
+import logging
 
 def generate_base_heading(dy, dx):
     base_heading = math.atan2(dy, dx) * 180 / math.pi
@@ -57,7 +58,7 @@ def run_model(street_coord_list):
                 for count in range(steps + 1):
                     y = xi + count * dx
                     x = yi + count * dy
-                    print([x, y])
+                    logging.debug([x, y])
                     locations[street]["coordinates"].append([x, y])
                     cid = locationExists([x, y])
                     if cid is not None:
@@ -73,7 +74,7 @@ def run_model(street_coord_list):
                                     if detection['conf'] > .75:
                                         locations[street]["detections"].append(detection)
                         except Exception as e:
-                            print(e)
+                            logging.debug(e)
                     else:
                         new_cid = writeCoordinate([x, y])
                         count = count + 1 
@@ -95,7 +96,7 @@ def run_model(street_coord_list):
                             results = model.predict(im[0])
                             result = results[0]
                             if len(result.boxes):
-                                print("Image Analyzed - Meter Found")
+                                logging.info("Image Analyzed - Meter Found")
                                 classifier = ""
                                 conf = 0
                                 box_info = None
@@ -139,6 +140,6 @@ def run_model(street_coord_list):
                                 if conf > .75: # only write if we're confident
                                     locations[street]["detections"].append(writeDetection(temp, new_cid))
                             else:
-                                print("Image Analyzed - Meter Not Found")
+                                logging.info("Image Analyzed - Meter Not Found")
                                 continue
     return locations

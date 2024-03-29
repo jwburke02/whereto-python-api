@@ -17,5 +17,5 @@ class DetailAPI(Resource):
             result['address'] = response.json()['results'][0]['formatted_address']
             return result
         except Exception as e:
-            print(e)
+            logging.debug(e)
             return "Error with your request...", 500

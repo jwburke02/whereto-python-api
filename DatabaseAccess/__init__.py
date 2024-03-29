@@ -2,6 +2,7 @@ import base64
 from core import db
 from random import randint
 import requests
+import logging
 
 ################### MODEL DEFINITION #######################
 class coordinate(db.Model):
@@ -71,7 +72,7 @@ def getDetections(cid): # function that will get every detection for a given CID
             detections.append(new_result)
         return detections
     except Exception as e:
-        print(e)
+        logging.debug(e)
     
 def writeCoordinate(point): # function taht will write a new coordinate to the database
     min = 1
@@ -119,6 +120,6 @@ def readDetection(did): # function that returns detailed information for a DID i
             }
             return new_result
     except Exception as e:
-        print(e)
+        logging.debug(e)
 
 ####################### END DATABASE ACCESS FUNCTIONALITY #####################
