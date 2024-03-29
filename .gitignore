@@ -6,3 +6,5 @@ map*
 temp*
 .DS_Store
 map*
+newenv
+.pytest_cache
