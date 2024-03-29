@@ -7,6 +7,7 @@ def detect_text(content):
     response = client.text_detection(image=image)
     texts = response.text_annotations
     response = ""
-    for text in texts:
-        response += (text.description + ' ')
+    for iter, text in enumerate(texts):
+        if iter != len(texts) - 1:
+            response += (text.description + ' ')
     return response
