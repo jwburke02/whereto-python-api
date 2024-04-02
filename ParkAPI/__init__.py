@@ -39,7 +39,7 @@ class ParkAPI(Resource):
             ################## MAP DATA QUERY ##################
             street_coord_list = query_osm(lat, long, radius)
             ################## ML ######################
-            examined_locations = run_model(street_coord_list)
+            examined_locations = run_model(street_coord_list, lat, long, radius)
             examined_locations['radius'] = radius
             examined_locations['center_lat'] = lat
             examined_locations['center_lng'] = long

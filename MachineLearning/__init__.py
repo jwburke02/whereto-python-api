@@ -12,6 +12,21 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+def checkLatLng(lat, lng, center_lat, center_lng, radius):
+    degpermile_lat = 1 / 69.172 # conventional conversion rate of lat to miles
+    degpermile_lng = 1 / (69.172 * math.cos(math.radians(center_lat))) # conventional conversion rate of lng to miles given lat
+    # convert lat, lng to normalized lat, lng
+    lat = lat - center_lat
+    lng = lng - center_lng
+    # now convert to miles
+    lat_miles = lat * (1/degpermile_lat)
+    lng_miles = lng * (1/degpermile_lng)
+    # now check the miles against radius
+    print(lat_miles, lng_miles, radius)
+    if math.sqrt(lat_miles * lat_miles + lng_miles * lng_miles) < radius:
+        return True
+    return False
+
 def generate_base_heading(dy, dx):
     base_heading = math.atan2(dy, dx) * 180 / math.pi
     if base_heading < 0:
@@ -32,7 +47,7 @@ def run_query(head_x_y):
     except:
         return None
 
-def run_model(street_coord_list):
+def run_model(street_coord_list, center_lat, center_lng, radius):
     locations = {}
     for street in street_coord_list:
         locations[street] = {
@@ -73,7 +88,7 @@ def run_model(street_coord_list):
                                     if item == detection:
                                         already_detected = True
                                 if not already_detected:
-                                    if detection['conf'] > .75:
+                                    if detection['conf'] > .75 and checkLatLng(detection['lat'], detection['lng'], center_lat, center_lng, radius):
                                         locations[street]["detections"].append(detection)
                         except Exception as e:
                             logger.debug(e)
@@ -108,7 +123,7 @@ def run_model(street_coord_list):
                                         classifier = result.names[box.cls[0].item()]
                                         box_info = box.xyxy.data[0]
                                 # we use x (lat) and y (lng) + heading (im[2]['head']) to guess real placement of these objects
-                                w = .00015 # some coordinate offset
+                                w = .00020 # some coordinate offset
                                 guessed_lat = x + w * math.cos(im[2]['head'])
                                 guessed_lng = y + w * math.sin(im[2]['head'])
                                 temp = {
@@ -139,7 +154,7 @@ def run_model(street_coord_list):
                                     img_str = buffered.getvalue()
                                     text_read = detect_text(img_str)
                                     temp['text_read'] = text_read
-                                if conf > .75: # only write if we're confident
+                                if conf > .75 and checkLatLng(temp['lat'], temp['lng'], center_lat, center_lng, radius): # only write if we're confident
                                     locations[street]["detections"].append(writeDetection(temp, new_cid))
                             else:
                                 logger.debug("Image Analyzed - Meter Not Found")
