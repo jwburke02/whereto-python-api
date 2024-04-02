@@ -4,6 +4,8 @@ import math
 import requests
 
 def fits(point, b_box): # helper function for staying within radial bounds
+    if isinstance(point[0], list) or isinstance(point[1], list):
+        return False
     if point[0] < b_box[0]:
         return False
     if point[0] > b_box[2]:
