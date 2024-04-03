@@ -124,8 +124,8 @@ def run_model(street_coord_list, center_lat, center_lng, radius):
                                         box_info = box.xyxy.data[0]
                                 # we use x (lat) and y (lng) + heading (im[2]['head']) to guess real placement of these objects
                                 w = .00020 # some coordinate offset
-                                guessed_lat = x + w * math.cos(im[2]['head'])
-                                guessed_lng = y + w * math.sin(im[2]['head'])
+                                guessed_lat = x + w * math.cos(math.radians(im[2]['head']))
+                                guessed_lng = y + w * math.sin(math.radians(im[2]['head']))
                                 temp = {
                                     "class_name": classifier,
                                     "lat": guessed_lat,
