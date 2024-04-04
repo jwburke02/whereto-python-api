@@ -22,7 +22,6 @@ def checkLatLng(lat, lng, center_lat, center_lng, radius):
     lat_miles = lat * (1/degpermile_lat)
     lng_miles = lng * (1/degpermile_lng)
     # now check the miles against radius
-    print(lat_miles, lng_miles, radius)
     if math.sqrt(lat_miles * lat_miles + lng_miles * lng_miles) < radius:
         return True
     return False
@@ -68,7 +67,7 @@ def run_model(street_coord_list, center_lat, center_lng, radius):
                     base_heading = (base_heading + 90) % 360
                     headings.append(base_heading)
                 d = math.sqrt((xf - xi) ** 2 + (yf - yi) ** 2)
-                steps = int(d * 500)
+                steps = int(d * 250)
                 steps = steps + 1
                 dx = (xf - xi) / steps
                 dy = (yf - yi) / steps
@@ -122,10 +121,16 @@ def run_model(street_coord_list, center_lat, center_lng, radius):
                                         conf = box.conf[0].item()
                                         classifier = result.names[box.cls[0].item()]
                                         box_info = box.xyxy.data[0]
+                                        norm_info = box.xyxyn.data[0]
+                                        size_info = box.xywhn.data[0]
                                 # we use x (lat) and y (lng) + heading (im[2]['head']) to guess real placement of these objects
                                 w = .00020 # some coordinate offset
-                                guessed_lat = x + w * math.cos(math.radians(im[2]['head']))
-                                guessed_lng = y + w * math.sin(math.radians(im[2]['head']))
+                                norm_info = norm_info.numpy()
+                                size_info = size_info.numpy()
+                                x_norm_disp = ((norm_info[0] + norm_info[2]) / 2.0) - .5
+                                norm_size = size_info[3] * size_info[2]
+                                guessed_lat = x + w * math.cos(math.radians(im[2]['head']) + x_norm_disp * 1.5)
+                                guessed_lng = y + w * math.sin(math.radians(im[2]['head']) + x_norm_disp * 1.5)
                                 temp = {
                                     "class_name": classifier,
                                     "lat": guessed_lat,
