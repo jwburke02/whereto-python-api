@@ -3,12 +3,25 @@ import config
 from PIL import Image
 import requests
 import io
-from WhereTo import model
 from multiprocessing.pool import ThreadPool
 from DatabaseAccess import locationExists, getDetections, writeDetection, writeCoordinate
 import math
 from TextProcessing import detect_text
 import logging
+import torch
+from ultralytics import YOLO
+
+model = YOLO("model4.pt")
+
+if torch.cuda.is_available():
+    device = torch.device("cuda")
+    print("USING GPU")
+else:
+    device = torch.device("cpu")
+    print("NOT USING GPU")
+
+model = model.to(device)
+
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
